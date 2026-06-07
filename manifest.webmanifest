@@ -1,0 +1,16 @@
+{
+  "name": "减肥邪修",
+  "short_name": "减肥邪修",
+  "description": "强制打卡、秦昊15天食谱、运动监督与减脂数据看板",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F7FA",
+  "theme_color": "#FF4D4F",
+  "icons": [
+    {"src":"icons/icon-192.png","sizes":"192x192","type":"image/png"},
+    {"src":"icons/icon-512.png","sizes":"512x512","type":"image/png"},
+    {"src":"icons/icon-180.png","sizes":"180x180","type":"image/png","purpose":"any"}
+  ]
+}
