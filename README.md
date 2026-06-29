@@ -159,3 +159,5 @@ npm run build:web
 - 增加更完整的体重趋势图。
 - 增加食谱完成后的日历视图。
 - 增加导出记录功能。
+
+<img width="2200" height="1240" alt="image" src="https://github.com/user-attachments/assets/a5cca7e5-058d-49ef-a6da-e66a876904e1" />
