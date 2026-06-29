@@ -52,6 +52,7 @@ export interface DietCheckIn {
   planType: PlanType;
   planDay: number;
   cycleDay?: number;
+  recipeId?: string;
   hasDietRecord: boolean;
   followedRecipe: boolean;
   violationFoods: FoodViolation[];

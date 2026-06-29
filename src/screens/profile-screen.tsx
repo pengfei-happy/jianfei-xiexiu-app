@@ -12,6 +12,7 @@ export function ProfileScreen() {
   const actions = useAppActions();
   const [initialInput, setInitialInput] = useState('');
   const [targetInput, setTargetInput] = useState('');
+  const [savedMessage, setSavedMessage] = useState('');
   const weightValue = `初始 ${state.userSettings.weightSettings.initialWeightJin ?? '待填'} · 目标 ${state.userSettings.weightSettings.targetWeightJin ?? '待填'}`;
   const planValue = state.userSettings.currentPlan === 'qin_hao_15' ? '秦昊15天计划' : '大冰7天循环计划';
   const notice = [
@@ -20,6 +21,14 @@ export function ProfileScreen() {
     '无油少盐、无糖、无酱料，杜绝零食、奶茶、油炸、夜宵、酒精、精加工食品。',
     '大冰计划遵守16:8轻断食和进食顺序。',
   ].join('');
+  const saveWeightSettings = () => {
+    const saved: string[] = [];
+    if (savePositive(initialInput, actions.setInitialWeight)) saved.push('初始体重');
+    if (savePositive(targetInput, actions.setTargetWeight)) saved.push('目标体重');
+    setInitialInput('');
+    setTargetInput('');
+    setSavedMessage(saved.length > 0 ? `${saved.join('、')}已保存` : '请输入大于 0 的体重');
+  };
 
   return (
     <SafeAreaView style={screen.safe} edges={['top']}>
@@ -50,39 +59,50 @@ export function ProfileScreen() {
         </View>
 
         <DataCard title="体重设置" subtitle="体重单位固定为斤。" value={weightValue}>
-          <View style={screen.quickRow}>
+          <View style={local.formStack}>
             <TextInput
               value={initialInput}
               onChangeText={setInitialInput}
               placeholder="初始体重"
               keyboardType="decimal-pad"
-              style={screen.input}
+              style={local.formInput}
             />
             <TextInput
               value={targetInput}
               onChangeText={setTargetInput}
               placeholder="目标体重"
               keyboardType="decimal-pad"
-              style={screen.input}
+              style={local.formInput}
             />
             <ActionButton
-              tone="light"
-              onPress={() => {
-                savePositive(initialInput, actions.setInitialWeight);
-                savePositive(targetInput, actions.setTargetWeight);
-                setInitialInput('');
-                setTargetInput('');
-              }}
+              tone="purple"
+              onPress={saveWeightSettings}
             >
               保存设置
             </ActionButton>
+            {savedMessage ? <Text style={local.savedText}>{savedMessage}</Text> : null}
           </View>
         </DataCard>
         <DataCard title="计划切换" subtitle="切换计划不会删除历史记录。" value={planValue}>
           <View style={local.switchRow}>
-            <ActionButton onPress={() => actions.setCurrentPlan('qin_hao_15')}>秦昊15天</ActionButton>
-            <ActionButton onPress={() => actions.setCurrentPlan('dabing_7_cycle')}>大冰循环</ActionButton>
+            <ActionButton
+              onPress={() => {
+                actions.setCurrentPlan('qin_hao_15');
+                setSavedMessage('已切换到秦昊15天计划');
+              }}
+            >
+              秦昊15天
+            </ActionButton>
+            <ActionButton
+              onPress={() => {
+                actions.setCurrentPlan('dabing_7_cycle');
+                setSavedMessage('已切换到大冰循环');
+              }}
+            >
+              大冰循环
+            </ActionButton>
           </View>
+          {savedMessage ? <Text style={local.savedText}>{savedMessage}</Text> : null}
         </DataCard>
         <DataCard title="减脂须知" subtitle={notice} />
         <DataCard title="嘴馋解馋法则" subtitle="原文未补齐的内容标记为待确认，不编造。" status="pending" />
@@ -114,7 +134,9 @@ function confirm(title: string, action: () => void) {
 
 function savePositive(value: string, save: (weight: number) => void) {
   const parsed = Number(value);
-  if (Number.isFinite(parsed) && parsed > 0) save(parsed);
+  if (!Number.isFinite(parsed) || parsed <= 0) return false;
+  save(parsed);
+  return true;
 }
 
 const local = {
@@ -143,4 +165,17 @@ const local = {
   goalValue: { color: colors.text, fontSize: 22, fontWeight: '900' as const },
   goalLabel: { color: colors.muted, fontSize: 12, fontWeight: '800' as const, marginTop: 4 },
   switchRow: { flexDirection: 'row' as const, gap: spacing.sm },
+  formStack: { gap: spacing.sm },
+  formInput: {
+    minHeight: 46,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingHorizontal: spacing.md,
+    color: colors.text,
+    backgroundColor: colors.paper,
+    fontSize: 16,
+    fontWeight: '700' as const,
+  },
+  savedText: { color: colors.greenDark, fontSize: 13, fontWeight: '900' as const },
 };

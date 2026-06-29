@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { PropsWithChildren } from 'react';
-import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 
 import { colors, radius, spacing } from '../theme';
 
@@ -29,7 +29,15 @@ export function DataCard({
     </View>
   );
   if (!onPress) return body;
-  return <Pressable onPress={onPress}>{body}</Pressable>;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.pressable, pressed && styles.buttonPressed]}
+    >
+      {body}
+    </Pressable>
+  );
 }
 
 export function SectionTitle({ children, action }: PropsWithChildren<{ action?: string }>) {
@@ -77,17 +85,22 @@ export function ActionButton({
   children,
   onPress,
   tone = 'purple',
+  disabled = false,
 }: PropsWithChildren<{
   onPress: () => void;
   tone?: 'purple' | 'red' | 'light';
+  disabled?: boolean;
 }>) {
   return (
     <Pressable
+      accessibilityRole="button"
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.actionButton,
         styles[`${tone}Button`],
-        pressed && styles.buttonPressed,
+        disabled && styles.disabledButton,
+        pressed && !disabled && styles.buttonPressed,
       ]}
     >
       <Text style={[styles.actionButtonText, tone === 'light' && styles.lightButtonText]}>
@@ -103,10 +116,15 @@ export const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.lg,
     gap: spacing.sm,
-    shadowColor: colors.shadow,
-    shadowOpacity: 0.16,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 12 },
+    ...Platform.select({
+      web: { boxShadow: '0 12px 24px rgba(143, 151, 166, 0.16)' },
+      default: {
+        shadowColor: colors.shadow,
+        shadowOpacity: 0.16,
+        shadowRadius: 20,
+        shadowOffset: { width: 0, height: 12 },
+      },
+    }),
     elevation: 4,
   },
   defaultCard: {},
@@ -156,10 +174,15 @@ export const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    ...Platform.select({ web: { cursor: 'pointer' }, default: {} }),
+  },
+  pressable: {
+    ...Platform.select({ web: { cursor: 'pointer' }, default: {} }),
   },
   purpleButton: { backgroundColor: colors.purple },
   redButton: { backgroundColor: colors.red },
   lightButton: { backgroundColor: colors.paper },
+  disabledButton: { opacity: 0.46 },
   buttonPressed: { opacity: 0.72, transform: [{ scale: 0.98 }] },
   actionButtonText: { color: colors.paper, fontSize: 15, fontWeight: '900' },
   lightButtonText: { color: colors.purple },

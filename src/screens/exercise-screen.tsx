@@ -1,41 +1,63 @@
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ActionButton, DataCard, EmptyState } from '../components/ui';
 import { useAppActions, useAppStore } from '../store/app-store';
+import { useTabNavigation } from '../navigation/tab-navigation';
 import { colors, spacing } from '../theme';
 import { screen } from './home-screen';
 
 export function ExerciseScreen() {
+  const navigation = useTabNavigation();
   const state = useAppStore((value) => value);
   const actions = useAppActions();
   const today = state.selectedDate;
   const record = state.exerciseRecords[today];
+  const [runningTimers, setRunningTimers] = useState({ inclineWalk: false, strength: false });
+  const [elapsedSeconds, setElapsedSeconds] = useState({ inclineWalk: 0, strength: 0 });
+  const [saveMessage, setSaveMessage] = useState('');
+
+  useEffect(() => {
+    if (!runningTimers.inclineWalk && !runningTimers.strength) return undefined;
+    const timer = setInterval(() => {
+      setElapsedSeconds((value) => ({
+        inclineWalk: runningTimers.inclineWalk ? value.inclineWalk + 1 : value.inclineWalk,
+        strength: runningTimers.strength ? value.strength + 1 : value.strength,
+      }));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [runningTimers.inclineWalk, runningTimers.strength]);
+
+  const startTimer = (type: 'inclineWalk' | 'strength') => {
+    setRunningTimers((value) => ({ ...value, [type]: true }));
+    setSaveMessage('');
+  };
+  const pauseTimer = (type: 'inclineWalk' | 'strength') => {
+    setRunningTimers((value) => ({ ...value, [type]: false }));
+  };
+  const finishTimer = (type: 'inclineWalk' | 'strength') => {
+    const seconds = Math.max(elapsedSeconds[type], 1);
+    actions.completeTimedExercise(today, type, seconds);
+    setSaveMessage(`${type === 'inclineWalk' ? '爬坡快走' : '徒手力量'}已保存：${formatDuration(seconds)}`);
+    setRunningTimers((value) => ({ ...value, [type]: false }));
+    setElapsedSeconds((value) => ({ ...value, [type]: 0 }));
+  };
 
   return (
     <SafeAreaView style={screen.safe} edges={['top']}>
       <ScrollView contentContainerStyle={screen.content}>
         <View style={local.navBar}>
-          <Text style={local.navButton}>‹</Text>
+          <Text accessibilityRole="button" onPress={() => navigation.navigate('Home')} style={local.navButton}>‹</Text>
           <Text style={local.navTitle}>饮食 & 运动</Text>
-          <Text style={local.navButton}>⌕</Text>
+          <Text accessibilityRole="button" onPress={() => navigation.navigate('Recipes')} style={local.navButton}>⌕</Text>
         </View>
-
-        <View style={local.sectionHeader}>
-          <Text style={screen.title}>今日食谱</Text>
-          <Text style={local.link}>15天计划</Text>
-        </View>
-
-        <DataCard title="第 1 天 · 纯半液断日" subtitle="无糖豆浆 500ml + 麦满分；午晚无糖茶/汤">
-          <Text style={local.glass}>🥛</Text>
-          <Text style={local.purpleButton}>+ 饮食打卡</Text>
-        </DataCard>
 
         <Text style={local.sectionTitle}>营养概览</Text>
         <View style={local.colorMetrics}>
           <View style={[local.colorMetric, { backgroundColor: colors.purple }]}>
-            <Text style={local.colorValue}>10+15</Text>
-            <Text style={local.colorLabel}>分钟</Text>
+            <Text style={local.colorValue}>60+30</Text>
+            <Text style={local.colorLabel}>运动目标</Text>
           </View>
           <View style={[local.colorMetric, { backgroundColor: colors.cyan }]}>
             <Text style={local.colorValue}>中等</Text>
@@ -46,22 +68,41 @@ export function ExerciseScreen() {
             <Text style={local.colorLabel}>缺口</Text>
           </View>
         </View>
+        {saveMessage ? <Text style={local.savedText}>{saveMessage}</Text> : null}
 
         <View style={local.sectionHeader}>
           <Text style={local.sectionTitle}>热门运动</Text>
-          <Text style={local.link}>全部 ›</Text>
+          <Text accessibilityRole="button" onPress={() => navigation.navigate('Recipes')} style={local.link}>全部 ›</Text>
         </View>
 
         <View style={local.sportCard}>
           <Text style={local.sportTitle}>大基数爬坡快走</Text>
+          {record?.inclineWalkMinutes ? (
+            <Text style={local.savedText}>今日已保存：{record.inclineWalkMinutes} 分钟</Text>
+          ) : null}
+          <Text style={local.cardTimer}>{formatDuration(elapsedSeconds.inclineWalk)}</Text>
           <View style={local.sportPills}>
             <Text style={local.sportPill}>60 min</Text>
             <Text style={local.sportPill}>保护膝盖</Text>
             <ActionButton
-              tone="light"
-              onPress={() => actions.updateInclineWalk(today, true, 60)}
+              tone={runningTimers.inclineWalk ? 'red' : 'light'}
+              onPress={() => startTimer('inclineWalk')}
             >
-              开始 ▶
+              {runningTimers.inclineWalk ? '计时中' : '开始计时 ▶'}
+            </ActionButton>
+            <ActionButton
+              tone="light"
+              disabled={!runningTimers.inclineWalk}
+              onPress={() => pauseTimer('inclineWalk')}
+            >
+              暂停
+            </ActionButton>
+            <ActionButton
+              tone="purple"
+              disabled={elapsedSeconds.inclineWalk === 0}
+              onPress={() => finishTimer('inclineWalk')}
+            >
+              完成保存
             </ActionButton>
           </View>
           <Text style={local.walker}>🚶‍♀️</Text>
@@ -69,14 +110,32 @@ export function ExerciseScreen() {
 
         <View style={[local.sportCard, local.strengthCard]}>
           <Text style={local.sportTitle}>徒手力量塑形</Text>
+          {record?.strengthMinutes ? (
+            <Text style={local.savedText}>今日已保存：{record.strengthMinutes} 分钟</Text>
+          ) : null}
+          <Text style={local.cardTimer}>{formatDuration(elapsedSeconds.strength)}</Text>
           <View style={local.sportPills}>
             <Text style={local.sportPill}>30 min</Text>
             <Text style={local.sportPill}>无负重</Text>
             <ActionButton
-              tone="light"
-              onPress={() => actions.updateStrength(today, true, 30)}
+              tone={runningTimers.strength ? 'red' : 'light'}
+              onPress={() => startTimer('strength')}
             >
-              开始 ▶
+              {runningTimers.strength ? '计时中' : '开始计时 ▶'}
+            </ActionButton>
+            <ActionButton
+              tone="light"
+              disabled={!runningTimers.strength}
+              onPress={() => pauseTimer('strength')}
+            >
+              暂停
+            </ActionButton>
+            <ActionButton
+              tone="purple"
+              disabled={elapsedSeconds.strength === 0}
+              onPress={() => finishTimer('strength')}
+            >
+              完成保存
             </ActionButton>
           </View>
         </View>
@@ -119,7 +178,6 @@ const local = StyleSheet.create({
   navTitle: { color: colors.text, fontSize: 20, fontWeight: '900' },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   link: { color: colors.purple, fontSize: 14, fontWeight: '900' },
-  glass: { position: 'absolute', right: 20, top: 26, fontSize: 58 },
   purpleButton: {
     alignSelf: 'flex-start',
     marginTop: spacing.sm,
@@ -161,4 +219,12 @@ const local = StyleSheet.create({
     fontWeight: '900',
   },
   walker: { position: 'absolute', right: 18, bottom: 8, fontSize: 58 },
+  cardTimer: { color: colors.text, fontSize: 34, fontWeight: '900', letterSpacing: 0, marginTop: spacing.md },
+  savedText: { color: colors.greenDark, fontSize: 13, fontWeight: '900' },
 });
+
+function formatDuration(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}

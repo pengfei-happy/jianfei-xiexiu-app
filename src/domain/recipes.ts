@@ -48,6 +48,16 @@ export function getRecipeForExecutionDay(planType: PlanType, executionDay: numbe
   return getRecipeByDay(planType, executionDay);
 }
 
+export function getRecipeVisual(recipe: RecipeDay): { emoji: string; label: string; tone: 'milk' | 'corn' | 'fruit' | 'protein' | 'greens' | 'balanced' } {
+  const text = `${recipe.stageName} ${recipe.coreRule} ${recipe.meals.map((meal) => meal.content).join(' ')}`;
+  if (/玉米/.test(text)) return { emoji: '🌽', label: '玉米日', tone: 'corn' };
+  if (/水果|火龙果|苹果|蓝莓|圣女果|小番茄/.test(text)) return { emoji: '🍎', label: '水果日', tone: 'fruit' };
+  if (/豆浆|牛奶|酸奶|液/.test(text)) return { emoji: '🥛', label: '饮品日', tone: 'milk' };
+  if (/鸡蛋|蛋|鸡胸|牛肉|鱼肉|鸡腿/.test(text)) return { emoji: '🥚', label: '蛋白日', tone: 'protein' };
+  if (/蔬菜|生菜|菠菜|西兰花|青菜|菜心|秋葵|黄瓜|冬瓜/.test(text)) return { emoji: '🥬', label: '蔬菜日', tone: 'greens' };
+  return { emoji: '🍽️', label: '均衡日', tone: 'balanced' };
+}
+
 function qin(day: number, phase: 'rapid_loss' | 'refeed_stabilize', stageName: string, estimatedWeightLossJin: number, coreRule: string, meals: string[]): RecipeDay {
   return {
     id: `qin-hao-${day}`,

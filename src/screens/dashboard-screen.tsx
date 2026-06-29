@@ -4,10 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { DataCard, EmptyState, ProgressBar, SectionTitle } from '../components/ui';
 import { calculateDailyWeightChange, getLatestWeightByDate } from '../domain/metrics';
 import { useAppStore } from '../store/app-store';
+import { useTabNavigation } from '../navigation/tab-navigation';
 import { colors, spacing } from '../theme';
 import { screen } from './home-screen';
 
 export function DashboardScreen() {
+  const navigation = useTabNavigation();
   const state = useAppStore((value) => value);
   const stats = state.getCompletionStats(state.selectedDate);
   const currentLoss = state.getCurrentLoss();
@@ -17,9 +19,9 @@ export function DashboardScreen() {
     <SafeAreaView style={screen.safe} edges={['top']}>
       <ScrollView contentContainerStyle={screen.content}>
         <View style={local.navBar}>
-          <Text style={local.navButton}>‹</Text>
+          <Text accessibilityRole="button" onPress={() => navigation.navigate('Home')} style={local.navButton}>‹</Text>
           <Text style={local.navTitle}>减脂数据看板</Text>
-          <Text style={local.navButton}>···</Text>
+          <Text accessibilityRole="button" onPress={() => navigation.navigate('Profile')} style={local.navButton}>···</Text>
         </View>
 
         <View style={local.hero}>

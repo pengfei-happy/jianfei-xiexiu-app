@@ -1,7 +1,7 @@
 import { createStore } from 'zustand/vanilla';
 
 import { calculateCheckInStatus, calculateCurrentLoss, calculateProgressRatio, calculateStreak } from '../domain/metrics';
-import { DABING_WEIGHT_LOSS_TEXT, QIN_HAO_TOTAL_TARGET_LOSS_JIN, getExecutionDay, getRecipeForExecutionDay } from '../domain/recipes';
+import { DABING_WEIGHT_LOSS_TEXT, QIN_HAO_TOTAL_TARGET_LOSS_JIN, getExecutionDay, getRecipeByDay, getRecipeForExecutionDay } from '../domain/recipes';
 import { DailyCheckIn, DietCheckIn, ExerciseRecord, FoodViolation, PlanType, RecipeDay, UserSettings, WeightRecord } from '../domain/types';
 
 export interface SlimState {
@@ -16,9 +16,10 @@ export interface SlimState {
   setInitialWeight: (weight: number) => void;
   setTargetWeight: (weight: number) => void;
   addWeightRecord: (input: { date: string; weightJin: number; note?: string }) => void;
-  saveDietCheckIn: (input: { date: string; followedRecipe: boolean; violationFoods: FoodViolation[]; note?: string }) => void;
+  saveDietCheckIn: (input: { date: string; followedRecipe: boolean; violationFoods: FoodViolation[]; recipeId?: string; note?: string }) => void;
   updateInclineWalk: (date: string, completed: boolean, minutes: number) => void;
   updateStrength: (date: string, completed: boolean, minutes: number) => void;
+  completeTimedExercise: (date: string, type: 'inclineWalk' | 'strength', seconds: number) => void;
   updateExerciseNote: (date: string, note: string) => void;
   resetCheckInsAndWeights: () => void;
   resetAllLocalData: () => void;
@@ -75,7 +76,8 @@ export function createSlimStore(today = formatLocalDate(new Date())) {
           createdAt: now,
           updatedAt: now,
         };
-        return recalculateDate({ ...state, weightRecords: [...state.weightRecords, record] }, input.date);
+        const otherDates = state.weightRecords.filter((item) => item.date !== input.date);
+        return recalculateDate({ ...state, weightRecords: [...otherDates, record] }, input.date);
       }),
     saveDietCheckIn: (input) =>
       set((state) => {
@@ -86,6 +88,7 @@ export function createSlimStore(today = formatLocalDate(new Date())) {
           planType: state.userSettings.currentPlan,
           planDay: executionDay,
           cycleDay: recipe?.cycleDay,
+          recipeId: input.recipeId ?? recipe?.id,
           hasDietRecord: true,
           followedRecipe: input.followedRecipe,
           violationFoods: input.violationFoods,
@@ -98,6 +101,15 @@ export function createSlimStore(today = formatLocalDate(new Date())) {
       set((state) => recalculateDate(upsertExercise(state, date, { inclineWalkCompleted: completed, inclineWalkMinutes: minutes }), date)),
     updateStrength: (date, completed, minutes) =>
       set((state) => recalculateDate(upsertExercise(state, date, { strengthCompleted: completed, strengthMinutes: minutes }), date)),
+    completeTimedExercise: (date, type, seconds) =>
+      set((state) => {
+        const minutes = Math.max(1, Math.ceil(seconds / 60));
+        const patch =
+          type === 'inclineWalk'
+            ? { inclineWalkCompleted: true, inclineWalkMinutes: minutes }
+            : { strengthCompleted: true, strengthMinutes: minutes };
+        return recalculateDate(upsertExercise(state, date, patch), date);
+      }),
     updateExerciseNote: (date, note) => set((state) => recalculateDate(upsertExercise(state, date, { note }), date)),
     resetCheckInsAndWeights: () =>
       set({
@@ -117,6 +129,15 @@ export function createSlimStore(today = formatLocalDate(new Date())) {
       }),
     getTodayRecipe: (date = get().selectedDate) => {
       const state = get();
+      const dietRecord = state.dietCheckIns[date];
+      if (dietRecord?.recipeId) {
+        const recipeIdParts = dietRecord.recipeId.split('-');
+        const dayFromId = Number(recipeIdParts[recipeIdParts.length - 1]);
+        const selectedRecipe = Number.isFinite(dayFromId)
+          ? getRecipeByDay(dietRecord.planType, dayFromId)
+          : undefined;
+        if (selectedRecipe?.id === dietRecord.recipeId) return selectedRecipe;
+      }
       const executionDay = getExecutionDay(state.userSettings.planStartDate, date);
       return getRecipeForExecutionDay(state.userSettings.currentPlan, executionDay);
     },

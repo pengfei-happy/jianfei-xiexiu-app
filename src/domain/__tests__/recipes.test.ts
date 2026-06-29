@@ -7,6 +7,7 @@ import {
   getExecutionDay,
   getRecipeByDay,
   getRecipeForExecutionDay,
+  getRecipeVisual,
   qinHaoRecipes,
 } from '../recipes';
 
@@ -44,6 +45,12 @@ describe('static recipe data and plan lookup', () => {
     assert.equal(getExecutionDay('2026-06-01', '2026-06-01'), 1);
     assert.equal(getExecutionDay('2026-06-01', '2026-06-15'), 15);
     assert.equal(getExecutionDay('2026-06-15', '2026-06-01'), 1);
+  });
+
+  it('matches recipe visuals to the day theme', () => {
+    assert.equal(getRecipeVisual(getRecipeByDay('qin_hao_15', 1)!).emoji, '🥛');
+    assert.equal(getRecipeVisual(getRecipeByDay('qin_hao_15', 2)!).emoji, '🌽');
+    assert.equal(getRecipeVisual(getRecipeByDay('qin_hao_15', 3)!).emoji, '🍎');
   });
 });
 
